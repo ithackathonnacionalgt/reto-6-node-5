@@ -199,35 +199,67 @@ const categories = [
 </BaseLayout>
 
 <script>
-  const evidenceInput = document.querySelector("#evidence");
-  const fileList = document.querySelector("#file-list");
-  const locationButton = document.querySelector("#location-button");
-  const locationStatus = document.querySelector("#location-status");
-  const form = document.querySelector("#complaint-form");
-  const formMessage = document.querySelector("#form-message");
+  const MAX_FILES = 5;
+  const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+  const evidenceInput = document.querySelector<HTMLInputElement>("#evidence");
+  const fileList = document.querySelector<HTMLDivElement>("#file-list");
+  const locationButton = document.querySelector<HTMLButtonElement>("#location-button");
+  const locationStatus = document.querySelector<HTMLParagraphElement>("#location-status");
+  const form = document.querySelector<HTMLFormElement>("#complaint-form");
+  const formMessage = document.querySelector<HTMLParagraphElement>("#form-message");
+
+  function showMessage(message: string, type: "error" | "info") {
+    if (!formMessage) return;
+
+    formMessage.textContent = message;
+    formMessage.className =
+      type === "error"
+        ? "block rounded-xl bg-red-50 p-4 text-sm text-red-700"
+        : "block rounded-xl bg-amber-50 p-4 text-sm text-amber-800";
+  }
 
   evidenceInput?.addEventListener("change", () => {
-    const files = Array.from(evidenceInput.files ?? []);
+    if (!fileList || !evidenceInput.files) return;
 
-    if (files.length > 5) {
+    const files = Array.from(evidenceInput.files);
+
+    if (files.length > MAX_FILES) {
       evidenceInput.value = "";
-      fileList.innerHTML = "<p class='text-sm text-red-600'>Puedes adjuntar un máximo de 5 archivos.</p>";
+      fileList.textContent = `Puedes adjuntar un máximo de ${MAX_FILES} archivos.`;
+      fileList.className = "mt-5 text-sm text-red-600";
       return;
     }
 
-    fileList.innerHTML = files
-      .map(
-        (file) => `
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-            <p class="truncate font-semibold text-slate-800">${file.name}</p>
-            <p class="mt-1 text-slate-500">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
-          </div>
-        `,
-      )
-      .join("");
+    if (files.some((file) => file.size > MAX_FILE_SIZE)) {
+      evidenceInput.value = "";
+      fileList.textContent = "Cada archivo debe pesar menos de 50 MB.";
+      fileList.className = "mt-5 text-sm text-red-600";
+      return;
+    }
+
+    fileList.replaceChildren();
+
+    for (const file of files) {
+      const card = document.createElement("div");
+      const name = document.createElement("p");
+      const size = document.createElement("p");
+
+      card.className = "rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm";
+      name.className = "truncate font-semibold text-slate-800";
+      size.className = "mt-1 text-slate-500";
+
+      name.textContent = file.name;
+      size.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+
+      card.append(name, size);
+      fileList.append(card);
+    }
   });
 
   locationButton?.addEventListener("click", () => {
+    if (!locationStatus) return;
+
     if (!navigator.geolocation) {
       locationStatus.textContent = "Tu navegador no permite usar geolocalización.";
       return;
@@ -236,22 +268,22 @@ const categories = [
     locationStatus.textContent = "Obteniendo ubicación...";
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      ({ coords }) => {
         locationStatus.textContent =
-          `Ubicación obtenida: ${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)}`;
+          `Ubicación obtenida: ${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`;
       },
       () => {
-        locationStatus.textContent = "No fue posible obtener la ubicación. Puedes indicar una referencia manual.";
+        locationStatus.textContent =
+          "No fue posible obtener la ubicación. Puedes indicar una referencia manual.";
       },
     );
   });
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
-
-    formMessage.textContent =
-      "Formulario validado. El siguiente paso será conectarlo a Supabase para guardar la denuncia y los archivos.";
-    formMessage.className =
-      "rounded-xl bg-amber-50 p-4 text-sm text-amber-800";
+    showMessage(
+      "Formulario validado. El siguiente paso será conectarlo a Supabase.",
+      "info",
+    );
   });
 </script>
