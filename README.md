@@ -22,7 +22,12 @@ Lo que ya hace:
 La ficha oficial dice **costo Q0** y **plazo de respuesta de 60 días**, y detalla once pasos. Del paso cuatro en adelante todo ocurre adentro de la institución. Después de recibir su número, la persona desaparece del proceso.
 
 > ### Nota sobre el alcance
-> La ficha que se presentó el primer día proponía como alcance mínimo levantar la denuncia, recibir un código y consultar el estado. Al verificar el trámite encontramos que **las dos primeras partes ya existen en SICODA**. Por eso el alcance mínimo se ajusta: el punto de partida ya no es registrar y emitir código, sino **consultar**. Lo que ya funciona no se rehace.
+> Este proyecto reconstruye y moderniza el registro y seguimiento de denuncias
+> ambientales de SICODA como prototipo para MARN. El MVP incluye denuncia
+> identificada o anónima, categoría, descripción, ubicación GPS, evidencia
+> multimedia, código de seguimiento único, consulta pública sanitizada, panel
+> administrativo para listar y actualizar estados, y agrupación geográfica
+> básica de denuncias cercanas de la misma categoría.
 
 ## Quién lo vive y por qué importa
 

@@ -1,0 +1,2 @@
+# Server-only local development variables. Never commit .dev.vars.
+SUPABASE_SERVICE_ROLE_KEY=
