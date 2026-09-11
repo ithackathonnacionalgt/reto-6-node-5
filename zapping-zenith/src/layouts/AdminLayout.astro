@@ -1,0 +1,42 @@
+---
+import BaseLayout from './BaseLayout.astro'
+
+interface Props {
+  title: string
+  email: string
+  role: 'ADMIN' | 'VIEWER'
+}
+
+const { title, email, role } = Astro.props
+---
+
+<BaseLayout title={`${title} | Panel MARN`} description="Panel interno de gestión de denuncias ambientales.">
+  <header class="border-b border-slate-200 bg-slate-950 text-white">
+    <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <a href="/admin" class="text-lg font-bold">Panel MARN</a>
+        <p class="text-sm text-slate-400">Gestión interna de denuncias ambientales</p>
+      </div>
+      <nav class="flex flex-wrap items-center gap-2 text-sm font-semibold">
+        <a href="/admin" class="rounded-lg px-3 py-2 hover:bg-slate-800">Denuncias</a>
+        <a href="/admin/mapa" class="rounded-lg px-3 py-2 hover:bg-slate-800">Mapa</a>
+        <span class="rounded-full bg-emerald-700 px-3 py-1.5">{role}</span>
+        <button id="admin-logout" type="button" class="rounded-lg border border-slate-600 px-3 py-2 hover:bg-slate-800">Cerrar sesión</button>
+      </nav>
+    </div>
+    <div class="mx-auto max-w-7xl px-6 pb-3 text-xs text-slate-400">Sesión: {email}</div>
+  </header>
+
+  <slot />
+</BaseLayout>
+
+<script>
+  import { getSupabaseBrowserClient } from '../lib/supabase/browser'
+
+  document.querySelector<HTMLButtonElement>('#admin-logout')?.addEventListener('click', async () => {
+    const button = document.querySelector<HTMLButtonElement>('#admin-logout')
+    if (button) button.disabled = true
+    await getSupabaseBrowserClient().auth.signOut()
+    window.location.assign('/admin/login')
+  })
+</script>

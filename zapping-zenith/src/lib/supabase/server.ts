@@ -3,7 +3,7 @@ import type { APIContext } from 'astro'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export function createSupabaseServerClient(
-  context: Pick<APIContext, 'cookies'>,
+  context: Pick<APIContext, 'cookies' | 'request'>,
 ): SupabaseClient {
   const url = import.meta.env.PUBLIC_SUPABASE_URL
   const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY
@@ -15,7 +15,22 @@ export function createSupabaseServerClient(
   return createServerClient(url, anonKey, {
     cookies: {
       getAll() {
-        return context.cookies.getAll().map(({ name, value }) => ({ name, value }))
+        const cookieHeader = context.request.headers.get('cookie')
+        if (!cookieHeader) return []
+
+        return cookieHeader.split(';').flatMap((cookie) => {
+          const separator = cookie.indexOf('=')
+          if (separator < 1) return []
+
+          const name = cookie.slice(0, separator).trim()
+          const encodedValue = cookie.slice(separator + 1).trim()
+
+          try {
+            return [{ name, value: decodeURIComponent(encodedValue) }]
+          } catch {
+            return [{ name, value: encodedValue }]
+          }
+        })
       },
       setAll(cookies) {
         cookies.forEach(({ name, value, options }) => {

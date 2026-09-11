@@ -98,7 +98,17 @@ import Footer from "../../components/Footer.astro";
           <input id="anonymous" name="isAnonymous" type="checkbox" class="mt-1 size-4 accent-emerald-700" />
           <div>
             <label for="anonymous" class="font-semibold">Deseo realizar una denuncia anónima</label>
-            <p class="mt-1 text-sm leading-6 text-slate-600">Si no marcas esta opción, solicitaremos tus datos de contacto en la siguiente versión del formulario.</p>
+            <p class="mt-1 text-sm leading-6 text-slate-600">Si no marcas esta opción, necesitaremos tu nombre para identificar la denuncia.</p>
+          </div>
+        </div>
+        <div id="reporter-fields" class="mt-5 grid gap-5 border-t border-slate-200 pt-5 sm:grid-cols-2">
+          <div>
+            <label for="reporter-name" class="mb-2 block text-sm font-semibold">Nombre completo <span class="text-red-600">*</span></label>
+            <input id="reporter-name" name="reporterName" type="text" required placeholder="Tu nombre completo" class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
+          </div>
+          <div>
+            <label for="reporter-email" class="mb-2 block text-sm font-semibold">Correo electrónico <span class="font-normal text-slate-500">(opcional)</span></label>
+            <input id="reporter-email" name="reporterEmail" type="email" placeholder="nombre@ejemplo.com" class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
           </div>
         </div>
       </section>
@@ -126,6 +136,11 @@ import Footer from "../../components/Footer.astro";
   const locationStatus = document.querySelector<HTMLParagraphElement>("#location-status");
   const form = document.querySelector<HTMLFormElement>("#complaint-form");
   const formMessage = document.querySelector<HTMLParagraphElement>("#form-message");
+  const submitButton = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+  const anonymousInput = document.querySelector<HTMLInputElement>("#anonymous");
+  const reporterFields = document.querySelector<HTMLDivElement>("#reporter-fields");
+  const reporterNameInput = document.querySelector<HTMLInputElement>("#reporter-name");
+  const reporterEmailInput = document.querySelector<HTMLInputElement>("#reporter-email");
   const categorySelect = document.querySelector<HTMLSelectElement>("#category");
   const categoryStatus = document.querySelector<HTMLParagraphElement>("#category-status");
   const latitudeInput = document.querySelector<HTMLInputElement>("#latitude");
@@ -159,6 +174,23 @@ import Footer from "../../components/Footer.astro";
     if (categoryStatus) categoryStatus.textContent = `${data.length} categorías disponibles.`;
   }
   void loadCategories();
+
+  function updateReporterFields() {
+    const isAnonymous = anonymousInput?.checked ?? false;
+    reporterFields?.classList.toggle("hidden", isAnonymous);
+    if (reporterNameInput) {
+      reporterNameInput.required = !isAnonymous;
+      reporterNameInput.disabled = isAnonymous;
+      if (isAnonymous) reporterNameInput.value = "";
+    }
+    if (reporterEmailInput) {
+      reporterEmailInput.disabled = isAnonymous;
+      if (isAnonymous) reporterEmailInput.value = "";
+    }
+  }
+
+  anonymousInput?.addEventListener("change", updateReporterFields);
+  updateReporterFields();
 
   const map = mapElement ? L.map(mapElement).setView(DEFAULT_CENTER, 12) : null;
   let marker: L.Marker | null = null;
@@ -227,8 +259,80 @@ import Footer from "../../components/Footer.astro";
     }
   });
 
-  form?.addEventListener("submit", (event) => {
+  form?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    showMessage("Formulario validado. El siguiente paso será conectarlo a Supabase.", "info");
+    if (!form || !categorySelect || !latitudeInput?.value || !longitudeInput?.value) {
+      showMessage("Selecciona una categoría y una ubicación antes de continuar.", "error");
+      return;
+    }
+
+    const files = Array.from(evidenceInput?.files ?? []);
+    const isAnonymous = anonymousInput?.checked ?? false;
+    const payload = {
+      categoryId: categorySelect.value,
+      description: (document.querySelector<HTMLTextAreaElement>("#description")?.value ?? "").trim(),
+      department: (document.querySelector<HTMLInputElement>("#department")?.value ?? "").trim(),
+      municipality: (document.querySelector<HTMLInputElement>("#municipality")?.value ?? "").trim(),
+      locationReference: (document.querySelector<HTMLInputElement>("#address")?.value ?? "").trim(),
+      latitude: Number(latitudeInput.value),
+      longitude: Number(longitudeInput.value),
+      reportedCompany: document.querySelector<HTMLInputElement>("#reported-party")?.value.trim() || null,
+      isAnonymous,
+      reporterName: isAnonymous ? null : reporterNameInput?.value.trim() || null,
+      reporterEmail: isAnonymous ? null : reporterEmailInput?.value.trim() || null,
+      media: files.map((file) => ({ fileName: file.name, mediaType: file.type, sizeBytes: file.size })),
+    };
+
+    if (!payload.categoryId || payload.description.length < 20 || !payload.department || !payload.municipality || !payload.locationReference) {
+      showMessage("Completa los campos obligatorios antes de continuar.", "error");
+      return;
+    }
+    if (!isAnonymous && !payload.reporterName) {
+      showMessage("Ingresa tu nombre completo o selecciona la denuncia anónima.", "error");
+      return;
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Preparando denuncia...";
+    }
+    showMessage("Estamos preparando tu denuncia y la evidencia adjunta...", "info");
+
+    try {
+      const createResponse = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const createBody = await createResponse.json() as { error?: string; trackingCode?: string; uploads?: Array<{ index: number; signedUrl: string; mediaType: string }> };
+      if (!createResponse.ok || !createBody.trackingCode || !createBody.uploads) {
+        throw new Error(createBody.error ?? "No se pudo registrar la denuncia.");
+      }
+
+      for (const upload of createBody.uploads) {
+        const file = files[upload.index];
+        if (!file) throw new Error("No se encontró uno de los archivos seleccionados.");
+        if (submitButton) submitButton.textContent = `Subiendo evidencia ${upload.index + 1} de ${createBody.uploads.length}...`;
+        const uploadResponse = await fetch(upload.signedUrl, {
+          method: "PUT",
+          headers: { "content-type": file.type },
+          body: file,
+        });
+        if (!uploadResponse.ok) throw new Error(`No se pudo subir ${file.name}.`);
+      }
+
+      if (submitButton) submitButton.textContent = "Validando evidencia...";
+      const completeResponse = await fetch(`/api/reports/${encodeURIComponent(createBody.trackingCode)}/media/complete`, { method: "POST" });
+      const completeBody = await completeResponse.json() as { error?: string };
+      if (!completeResponse.ok) throw new Error(completeBody.error ?? "No se pudo confirmar la evidencia.");
+
+      window.location.assign(`/denunciar/confirmacion?trackingCode=${encodeURIComponent(createBody.trackingCode)}`);
+    } catch (error) {
+      showMessage(error instanceof Error ? error.message : "No se pudo enviar la denuncia. Intenta nuevamente.", "error");
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Continuar con la denuncia";
+      }
+    }
   });
 </script>
