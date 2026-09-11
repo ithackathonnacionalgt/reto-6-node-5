@@ -1,8 +1,10 @@
 {
-	"name": "ecoalerta-marn",
+	"name": "monami",
 	"main": "@astrojs/cloudflare/entrypoints/server",
 	"compatibility_date": "2026-09-10",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"assets": {
 		"directory": "./dist",
 		"binding": "ASSETS"

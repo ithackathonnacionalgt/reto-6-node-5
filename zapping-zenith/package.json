@@ -22,6 +22,7 @@
     "astro": "^7.3.2",
     "canvas-confetti": "^1.9.4",
     "leaflet": "^1.9.4",
+    "resend": "^6.27.0",
     "tailwindcss": "^4.2.1",
     "vite": "^8.0.13"
   },

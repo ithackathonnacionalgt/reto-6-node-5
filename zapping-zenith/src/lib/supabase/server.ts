@@ -1,12 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import type { APIContext } from 'astro'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getServerEnvironment } from '../env/server'
 
 export function createSupabaseServerClient(
   context: Pick<APIContext, 'cookies' | 'request'>,
 ): SupabaseClient {
-  const url = import.meta.env.PUBLIC_SUPABASE_URL
-  const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  const url = getServerEnvironment('PUBLIC_SUPABASE_URL')
+  const anonKey = getServerEnvironment('PUBLIC_SUPABASE_ANON_KEY')
 
   if (!url || !anonKey) {
     throw new Error('Supabase public environment variables are missing')

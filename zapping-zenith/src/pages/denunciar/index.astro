@@ -313,10 +313,13 @@ import Footer from "../../components/Footer.astro";
         const file = files[upload.index];
         if (!file) throw new Error("No se encontró uno de los archivos seleccionados.");
         if (submitButton) submitButton.textContent = `Subiendo evidencia ${upload.index + 1} de ${createBody.uploads.length}...`;
+        const uploadBody = new FormData();
+        uploadBody.append("cacheControl", "3600");
+        uploadBody.append("", file);
         const uploadResponse = await fetch(upload.signedUrl, {
           method: "PUT",
-          headers: { "content-type": file.type },
-          body: file,
+          headers: { "x-upsert": "false" },
+          body: uploadBody,
         });
         if (!uploadResponse.ok) throw new Error(`No se pudo subir ${file.name}.`);
       }

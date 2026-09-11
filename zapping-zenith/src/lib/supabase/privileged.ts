@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getServerEnvironment } from '../env/server'
 
 export function createPrivilegedSupabaseClient(): SupabaseClient {
-  const url = import.meta.env.PUBLIC_SUPABASE_URL
-  const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY
+  const url = getServerEnvironment('PUBLIC_SUPABASE_URL')
+  const serviceRoleKey = getServerEnvironment('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!url || !serviceRoleKey) {
     throw new Error('Supabase server environment variables are missing')
@@ -15,5 +16,5 @@ export function createPrivilegedSupabaseClient(): SupabaseClient {
 }
 
 export function getStorageBucket(): string {
-  return import.meta.env.SUPABASE_STORAGE_BUCKET || 'report-evidence'
+  return getServerEnvironment('SUPABASE_STORAGE_BUCKET') || 'report-evidence'
 }
