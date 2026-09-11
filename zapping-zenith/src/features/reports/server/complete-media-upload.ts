@@ -1,9 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ALLOWED_MEDIA_TYPES } from '../../../contracts/reports'
 import { getStorageBucket } from '../../../lib/supabase/privileged'
+import { revisarImagen } from '../../evidencia/server/revisar-imagen'
 
 const MAX_FILES = 5
 const MAX_FILE_SIZE = 50 * 1024 * 1024
+
+export class EvidenceRejectedError extends Error {}
 
 interface StorageMetadata {
   size?: number | string
@@ -20,9 +23,20 @@ function isStorageMetadata(value: unknown): value is StorageMetadata {
   return typeof value === 'object' && value !== null
 }
 
+async function arrayBufferToBase64(buffer: ArrayBuffer): Promise<string> {
+  const bytes = new Uint8Array(buffer)
+  const chunkSize = 0x8000
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+  }
+  return btoa(binary)
+}
+
 export async function completeMediaUpload(
   supabase: SupabaseClient,
   trackingCode: string,
+  makeWebhookUrl: string,
 ): Promise<{ trackingCode: string; status: string; message: string }> {
   const { data: report, error: reportError } = await supabase
     .from('reports')
@@ -65,6 +79,28 @@ export async function completeMediaUpload(
     }
     if (!ALLOWED_MEDIA_TYPES.includes(mediaType as (typeof ALLOWED_MEDIA_TYPES)[number]) || mediaType !== item.media_type) {
       throw new Error('El tipo MIME de una evidencia no coincide')
+    }
+  }
+
+  const imageItems = expected.filter((item) => item.media_type.startsWith('image/'))
+
+  for (const item of imageItems) {
+    const { data: file, error: downloadError } = await supabase.storage
+      .from(getStorageBucket())
+      .download(item.storage_path)
+
+    if (downloadError || !file) throw new Error('No se pudo descargar la evidencia para revisión')
+
+    const imageBase64 = await arrayBufferToBase64(await file.arrayBuffer())
+    const { pass } = await revisarImagen(imageBase64, item.media_type, makeWebhookUrl)
+
+    if (!pass) {
+      await supabase.storage
+        .from(getStorageBucket())
+        .remove(expected.map((entry) => entry.storage_path))
+      await supabase.from('report_media').delete().eq('report_id', report.id)
+      await supabase.from('reports').delete().eq('id', report.id)
+      throw new EvidenceRejectedError('La evidencia no pasó la revisión automática')
     }
   }
 
