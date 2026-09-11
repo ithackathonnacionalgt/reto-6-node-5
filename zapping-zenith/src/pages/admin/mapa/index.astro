@@ -1,0 +1,103 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { getAuthContext } from '../../../lib/auth/admin-guard'
+
+const auth = await getAuthContext(Astro)
+if (!auth) return Astro.redirect('/admin/login')
+---
+
+<AdminLayout title="Mapa de denuncias" email={auth.user.email ?? 'Usuario institucional'} role={auth.role}>
+  <main class="mx-auto max-w-7xl px-6 py-10">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-widest text-emerald-700">Vista geográfica</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-950">Agrupaciones de denuncias</h1>
+        <p class="mt-2 text-slate-600">Las denuncias cercanas se agrupan por categoría en un radio aproximado de 1 km.</p>
+      </div>
+      <div class="w-full sm:w-72">
+        <label for="cluster-category" class="mb-2 block text-sm font-semibold">Filtrar categoría</label>
+        <select id="cluster-category" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><option value="">Todas las categorías</option></select>
+      </div>
+    </div>
+
+    <section class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <p id="cluster-summary" class="text-sm font-semibold text-slate-700">Cargando agrupaciones...</p>
+        <a href="/admin" class="text-sm font-semibold text-emerald-700 hover:text-emerald-900">Volver al listado</a>
+      </div>
+      <p id="cluster-error" class="hidden bg-red-50 px-5 py-4 text-sm text-red-700" role="alert"></p>
+      <div id="cluster-map" class="h-[65vh] min-h-[420px] w-full"></div>
+    </section>
+  </main>
+</AdminLayout>
+
+<script>
+  import L from 'leaflet'
+  import 'leaflet/dist/leaflet.css'
+  import { getSupabaseBrowserClient } from '../../../lib/supabase/browser'
+
+  interface Cluster {
+    category_id: string
+    category_name: string
+    cluster_id: number
+    report_count: number
+    latitude: number
+    longitude: number
+    report_ids: string[]
+  }
+  interface ClusterResponse { radiusMeters: number; clusters: Cluster[]; error?: string }
+
+  const map = L.map('cluster-map').setView([15.5, -90.25], 7)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19 }).addTo(map)
+  const layer = L.layerGroup().addTo(map)
+  const categorySelect = document.querySelector<HTMLSelectElement>('#cluster-category')
+  const summary = document.querySelector<HTMLParagraphElement>('#cluster-summary')
+  const errorMessage = document.querySelector<HTMLParagraphElement>('#cluster-error')
+
+  function renderClusters(clusters: Cluster[]) {
+    layer.clearLayers()
+    const bounds = L.latLngBounds([])
+    for (const cluster of clusters) {
+      const count = Number(cluster.report_count)
+      const latitude = Number(cluster.latitude)
+      const longitude = Number(cluster.longitude)
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue
+      const marker = L.circleMarker([latitude, longitude], {
+        radius: Math.min(30, 8 + Math.sqrt(count) * 4),
+        color: '#065f46', fillColor: '#10b981', fillOpacity: 0.75, weight: 2,
+      })
+      marker.bindPopup(`<strong>${cluster.category_name}</strong><br>${count} denuncia${count === 1 ? '' : 's'}`)
+      marker.addTo(layer)
+      bounds.extend([latitude, longitude])
+    }
+    if (bounds.isValid()) map.fitBounds(bounds.pad(0.15), { maxZoom: 15 })
+    if (summary) summary.textContent = `${clusters.length} agrupación${clusters.length === 1 ? '' : 'es'} geográfica${clusters.length === 1 ? '' : 's'}`
+  }
+
+  async function loadClusters() {
+    errorMessage?.classList.add('hidden')
+    if (summary) summary.textContent = 'Cargando agrupaciones...'
+    const params = new URLSearchParams()
+    if (categorySelect?.value) params.set('categoryId', categorySelect.value)
+    try {
+      const response = await fetch(`/api/admin/report-clusters?${params}`)
+      if (response.status === 401) return window.location.assign('/admin/login')
+      const data = await response.json() as ClusterResponse
+      if (!response.ok) throw new Error(data.error ?? 'No se pudieron cargar las agrupaciones.')
+      renderClusters(data.clusters)
+    } catch (error) {
+      if (summary) summary.textContent = 'No se pudo cargar el mapa'
+      if (errorMessage) { errorMessage.textContent = error instanceof Error ? error.message : 'Error inesperado.'; errorMessage.classList.remove('hidden') }
+    }
+  }
+
+  async function loadCategories() {
+    if (!categorySelect) return
+    const { data } = await getSupabaseBrowserClient().from('categories').select('id,name').order('name')
+    for (const category of data ?? []) categorySelect.add(new Option(category.name, category.id))
+  }
+
+  categorySelect?.addEventListener('change', () => void loadClusters())
+  void loadCategories()
+  void loadClusters()
+</script>

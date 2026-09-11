@@ -1,0 +1,154 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import StatusTimeline from "../../components/StatusTimeLine.astro";
+---
+
+<BaseLayout
+  title="Seguimiento de denuncia | EcoAlerta MARN"
+  description="Consulta el estado de una denuncia ambiental mediante su código de seguimiento."
+>
+  <Header />
+
+  <main class="mx-auto max-w-4xl px-6 py-12 sm:py-16">
+    <section class="mx-auto max-w-2xl text-center">
+      <p class="text-sm font-bold uppercase tracking-widest text-emerald-700">
+        Seguimiento ciudadano
+      </p>
+      <h1 class="mt-3 text-4xl font-bold tracking-tight text-slate-950">
+        Consulta el estado de tu denuncia
+      </h1>
+      <p class="mt-4 leading-7 text-slate-600">
+        Ingresa el código único que recibiste al registrar tu denuncia. No necesitas iniciar sesión.
+      </p>
+
+      <form id="tracking-form" class="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <label for="tracking-code" class="sr-only">Código de seguimiento</label>
+
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <input
+            id="tracking-code"
+            name="trackingCode"
+            type="text"
+            required
+            maxlength="40"
+            placeholder="Ej. MARN-26-A1B2C3D4"
+            class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono uppercase outline-none placeholder:font-sans placeholder:normal-case focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+          />
+          <button
+            type="submit"
+            class="rounded-xl bg-emerald-700 px-6 py-3 font-semibold text-white hover:bg-emerald-800"
+          >
+            Consultar
+          </button>
+        </div>
+
+        <p id="tracking-error" role="alert" class="mt-3 hidden text-left text-sm text-red-600"></p>
+      </form>
+    </section>
+
+    <section
+      id="tracking-result"
+      class="mt-12 hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+      aria-live="polite"
+    >
+      <div class="flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-500">Código de seguimiento</p>
+          <p id="result-code" class="mt-1 font-mono text-lg font-bold text-slate-950"></p>
+        </div>
+
+        <span class="w-fit rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-800">
+          En análisis inicial
+        </span>
+      </div>
+
+      <div class="mt-6 grid gap-4 sm:grid-cols-3">
+        <div class="rounded-xl bg-slate-50 p-4">
+          <p class="text-sm text-slate-500">Categoría</p>
+          <p class="mt-1 font-semibold">Contaminación del agua</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 p-4">
+          <p class="text-sm text-slate-500">Ubicación</p>
+          <p class="mt-1 font-semibold">Guatemala, Guatemala</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 p-4">
+          <p class="text-sm text-slate-500">Fecha de registro</p>
+          <p class="mt-1 font-semibold">10 de septiembre, 2026</p>
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <h2 class="text-xl font-bold text-slate-950">Historial del caso</h2>
+
+        <ol class="mt-6 space-y-6 border-l-2 border-emerald-200 pl-6">
+          <li class="relative">
+            <span class="absolute -left-[33px] top-1 size-4 rounded-full bg-emerald-700 ring-4 ring-emerald-100"></span>
+            <p class="font-bold text-slate-950">Denuncia ingresada</p>
+            <p class="mt-1 text-sm text-slate-600">
+              La denuncia fue registrada correctamente y recibió su código de seguimiento.
+            </p>
+            <time class="mt-2 block text-sm text-slate-500">10 de septiembre de 2026</time>
+          </li>
+
+          <li class="relative">
+            <span class="absolute -left-[33px] top-1 size-4 rounded-full bg-emerald-700 ring-4 ring-emerald-100"></span>
+            <p class="font-bold text-slate-950">Análisis inicial</p>
+            <p class="mt-1 text-sm text-slate-600">
+              El equipo responsable está revisando la información y la evidencia adjunta.
+            </p>
+            <time class="mt-2 block text-sm text-slate-500">Estado actual</time>
+          </li>
+
+          <li class="relative opacity-50">
+            <span class="absolute -left-[33px] top-1 size-4 rounded-full bg-slate-300 ring-4 ring-slate-100"></span>
+            <p class="font-bold text-slate-950">Resolución o traslado</p>
+            <p class="mt-1 text-sm text-slate-600">
+              La denuncia será trasladada o resuelta según corresponda.
+            </p>
+          </li>
+        </ol>
+      </div>
+
+      <p class="mt-8 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+        Por privacidad, esta consulta no muestra datos personales ni evidencia sensible.
+      </p>
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>("#tracking-form");
+  const input = document.querySelector<HTMLInputElement>("#tracking-code");
+  const error = document.querySelector<HTMLParagraphElement>("#tracking-error");
+  const result = document.querySelector<HTMLElement>("#tracking-result");
+  const resultCode = document.querySelector<HTMLParagraphElement>("#result-code");
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const code = input?.value.trim().toUpperCase() ?? "";
+
+    if (code.length < 6) {
+      if (error) {
+        error.textContent = "Ingresa un código de seguimiento válido.";
+        error.classList.remove("hidden");
+      }
+
+      result?.classList.add("hidden");
+      return;
+    }
+
+    if (error) {
+      error.textContent = "";
+      error.classList.add("hidden");
+    }
+
+    if (resultCode) resultCode.textContent = code;
+    result?.classList.remove("hidden");
+    result?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+</script>

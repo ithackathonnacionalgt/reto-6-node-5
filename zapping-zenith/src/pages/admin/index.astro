@@ -1,0 +1,193 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import { getAuthContext } from '../../lib/auth/admin-guard'
+
+const auth = await getAuthContext(Astro)
+if (!auth) return Astro.redirect('/admin/login')
+---
+
+<AdminLayout title="Denuncias" email={auth.user.email ?? 'Usuario institucional'} role={auth.role}>
+  <main class="mx-auto max-w-7xl px-6 py-10">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-widest text-emerald-700">Gestión de casos</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-950">Denuncias ambientales</h1>
+        <p class="mt-2 text-slate-600">Consulta, filtra y revisa las denuncias recibidas.</p>
+      </div>
+      <a href="/admin/mapa" class="w-fit rounded-xl border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Ver mapa de agrupaciones</a>
+    </div>
+
+    <form id="report-filters" class="mt-8 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 xl:grid-cols-5">
+      <div>
+        <label for="filter-status" class="mb-2 block text-sm font-semibold">Estado</label>
+        <select id="filter-status" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+          <option value="">Todos</option>
+          <option value="RECEIVED">Recibida</option>
+          <option value="UNDER_REVIEW">En revisión</option>
+          <option value="CLASSIFIED">Clasificada</option>
+          <option value="INSPECTION_PENDING">Inspección pendiente</option>
+          <option value="INSPECTION_COMPLETED">Inspección completada</option>
+          <option value="REPORT_PENDING">Informe pendiente</option>
+          <option value="CLOSED">Cerrada</option>
+        </select>
+      </div>
+      <div>
+        <label for="filter-category" class="mb-2 block text-sm font-semibold">Categoría</label>
+        <select id="filter-category" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5"><option value="">Todas</option></select>
+      </div>
+      <div>
+        <label for="filter-department" class="mb-2 block text-sm font-semibold">Departamento</label>
+        <input id="filter-department" type="search" placeholder="Ej. Guatemala" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
+      </div>
+      <div>
+        <label for="filter-municipality" class="mb-2 block text-sm font-semibold">Municipio</label>
+        <input id="filter-municipality" type="search" placeholder="Ej. Mixco" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
+      </div>
+      <div class="flex items-end gap-2">
+        <button type="submit" class="rounded-xl bg-emerald-700 px-4 py-2.5 font-semibold text-white hover:bg-emerald-800">Filtrar</button>
+        <button id="clear-filters" type="button" class="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-50">Limpiar</button>
+      </div>
+    </form>
+
+    <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <p id="report-count" class="text-sm font-semibold text-slate-700">Cargando denuncias...</p>
+        <p id="report-error" class="hidden text-sm text-red-700" role="alert"></p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+          <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th class="px-5 py-3">Código</th><th class="px-5 py-3">Categoría</th><th class="px-5 py-3">Ubicación</th><th class="px-5 py-3">Estado</th><th class="px-5 py-3">Evidencia</th><th class="px-5 py-3">Fecha</th><th class="px-5 py-3"></th></tr>
+          </thead>
+          <tbody id="report-list" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <div class="flex items-center justify-between border-t border-slate-200 px-5 py-4">
+        <button id="previous-page" type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40">Anterior</button>
+        <span id="page-indicator" class="text-sm text-slate-600"></span>
+        <button id="next-page" type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40">Siguiente</button>
+      </div>
+    </section>
+  </main>
+</AdminLayout>
+
+<script>
+  import { getSupabaseBrowserClient } from '../../lib/supabase/browser'
+
+  interface ReportItem {
+    id: string
+    tracking_code: string
+    department: string
+    municipality: string
+    current_status: string
+    created_at: string
+    categories: { id: string; name: string; icon: string | null } | null
+    report_media: Array<{ id: string }>
+  }
+  interface ReportPage { items: ReportItem[]; page: number; pageSize: number; total: number; error?: string }
+
+  const statusLabels: Record<string, string> = {
+    RECEIVED: 'Recibida', UNDER_REVIEW: 'En revisión', CLASSIFIED: 'Clasificada',
+    INSPECTION_PENDING: 'Inspección pendiente', INSPECTION_COMPLETED: 'Inspección completada',
+    REPORT_PENDING: 'Informe pendiente', CLOSED: 'Cerrada',
+  }
+  const list = document.querySelector<HTMLTableSectionElement>('#report-list')
+  const count = document.querySelector<HTMLParagraphElement>('#report-count')
+  const errorMessage = document.querySelector<HTMLParagraphElement>('#report-error')
+  const pageIndicator = document.querySelector<HTMLSpanElement>('#page-indicator')
+  const previousButton = document.querySelector<HTMLButtonElement>('#previous-page')
+  const nextButton = document.querySelector<HTMLButtonElement>('#next-page')
+  const filters = document.querySelector<HTMLFormElement>('#report-filters')
+  const categoryFilter = document.querySelector<HTMLSelectElement>('#filter-category')
+  let currentPage = 1
+  const pageSize = 15
+
+  const textCell = (value: string) => {
+    const cell = document.createElement('td')
+    cell.className = 'px-5 py-4 text-slate-700'
+    cell.textContent = value
+    return cell
+  }
+
+  function renderItems(data: ReportPage) {
+    if (!list) return
+    list.replaceChildren()
+    for (const report of data.items) {
+      const row = document.createElement('tr')
+      row.className = 'hover:bg-slate-50'
+      const code = textCell(report.tracking_code)
+      code.classList.add('font-mono', 'font-semibold')
+      row.append(code)
+      row.append(textCell(report.categories?.name ?? 'Sin categoría'))
+      row.append(textCell(`${report.department}, ${report.municipality}`))
+      row.append(textCell(statusLabels[report.current_status] ?? report.current_status))
+      row.append(textCell(String(report.report_media?.length ?? 0)))
+      row.append(textCell(new Intl.DateTimeFormat('es-GT', { dateStyle: 'medium' }).format(new Date(report.created_at))))
+      const action = document.createElement('td')
+      action.className = 'px-5 py-4 text-right'
+      const link = document.createElement('a')
+      link.href = `/admin/denuncias/${encodeURIComponent(report.id)}`
+      link.className = 'font-semibold text-emerald-700 hover:text-emerald-900'
+      link.textContent = 'Ver detalle'
+      action.append(link)
+      row.append(action)
+      list.append(row)
+    }
+    if (!data.items.length) {
+      const row = document.createElement('tr')
+      const cell = document.createElement('td')
+      cell.colSpan = 7
+      cell.className = 'px-5 py-10 text-center text-slate-500'
+      cell.textContent = 'No se encontraron denuncias con estos filtros.'
+      row.append(cell)
+      list.append(row)
+    }
+  }
+
+  async function loadReports(page = 1) {
+    errorMessage?.classList.add('hidden')
+    if (count) count.textContent = 'Cargando denuncias...'
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+    const status = document.querySelector<HTMLSelectElement>('#filter-status')?.value
+    const category = categoryFilter?.value
+    const department = document.querySelector<HTMLInputElement>('#filter-department')?.value.trim()
+    const municipality = document.querySelector<HTMLInputElement>('#filter-municipality')?.value.trim()
+    if (status) params.set('status', status)
+    if (category) params.set('categoryId', category)
+    if (department) params.set('department', department)
+    if (municipality) params.set('municipality', municipality)
+
+    try {
+      const response = await fetch(`/api/admin/reports?${params}`)
+      if (response.status === 401) return window.location.assign('/admin/login')
+      const data = await response.json() as ReportPage
+      if (!response.ok) throw new Error(data.error ?? 'No se pudieron cargar las denuncias.')
+      currentPage = data.page
+      renderItems(data)
+      const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize))
+      if (count) count.textContent = `${data.total} denuncia${data.total === 1 ? '' : 's'}`
+      if (pageIndicator) pageIndicator.textContent = `Página ${data.page} de ${totalPages}`
+      if (previousButton) previousButton.disabled = data.page <= 1
+      if (nextButton) nextButton.disabled = data.page >= totalPages
+    } catch (error) {
+      if (count) count.textContent = 'No se pudieron cargar las denuncias'
+      if (errorMessage) {
+        errorMessage.textContent = error instanceof Error ? error.message : 'Error inesperado.'
+        errorMessage.classList.remove('hidden')
+      }
+    }
+  }
+
+  async function loadCategories() {
+    if (!categoryFilter) return
+    const { data } = await getSupabaseBrowserClient().from('categories').select('id,name').order('name')
+    for (const category of data ?? []) categoryFilter.add(new Option(category.name, category.id))
+  }
+
+  filters?.addEventListener('submit', (event) => { event.preventDefault(); void loadReports(1) })
+  document.querySelector<HTMLButtonElement>('#clear-filters')?.addEventListener('click', () => { filters?.reset(); void loadReports(1) })
+  previousButton?.addEventListener('click', () => void loadReports(currentPage - 1))
+  nextButton?.addEventListener('click', () => void loadReports(currentPage + 1))
+  void loadCategories()
+  void loadReports()
+</script>
