@@ -1,5 +1,5 @@
 create table public.categories (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   slug text unique not null,
   name text unique not null,
   description text,
@@ -8,7 +8,7 @@ create table public.categories (
 );
 
 create table public.reports (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   tracking_code text unique not null default public.generate_tracking_code(),
   is_anonymous boolean not null default false,
   reporter_name text,
@@ -21,8 +21,8 @@ create table public.reports (
   location_reference text not null,
   latitude double precision not null,
   longitude double precision not null,
-  location geography(Point, 4326) generated always as (
-    st_setsrid(st_makepoint(longitude, latitude), 4326)::geography
+  location extensions.geography(Point, 4326) generated always as (
+    extensions.st_setsrid(extensions.st_makepoint(longitude, latitude), 4326)::extensions.geography
   ) stored,
   current_status public.report_status not null default 'RECEIVED',
   created_at timestamptz not null default now(),

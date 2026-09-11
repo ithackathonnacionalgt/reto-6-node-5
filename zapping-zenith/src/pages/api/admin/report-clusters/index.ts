@@ -1,6 +1,6 @@
 import type { APIContext } from 'astro'
-import { getReportClusters } from '../../../features/reports/server/get-report-clusters'
-import { forbiddenResponse, getAuthContext, unauthorizedResponse } from '../../../lib/auth/admin-guard'
+import { getReportClusters } from '../../../../features/reports/server/get-report-clusters'
+import { forbiddenResponse, getAuthContext, unauthorizedResponse } from '../../../../lib/auth/admin-guard'
 
 export const prerender = false
 

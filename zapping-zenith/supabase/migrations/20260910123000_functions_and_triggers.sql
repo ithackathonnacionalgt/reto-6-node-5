@@ -151,12 +151,12 @@ as $$
       r.id,
       r.category_id,
       c.name as category_name,
-      st_clusterdbscan(
-        st_transform(r.location::geometry, 3857),
+      extensions.st_clusterdbscan(
+        extensions.st_transform(r.location::extensions.geometry, 3857),
         eps => 1000,
         minpoints => 1
       ) over (partition by r.category_id) as cluster_id,
-      st_transform(r.location::geometry, 3857) as projected_location
+      extensions.st_transform(r.location::extensions.geometry, 3857) as projected_location
     from public.reports r
     join public.categories c on c.id = r.category_id
     where p_category_id is null or r.category_id = p_category_id
@@ -166,8 +166,8 @@ as $$
     category_name,
     cluster_id,
     count(*)::bigint,
-    st_y(st_transform(st_centroid(st_collect(projected_location)), 4326)),
-    st_x(st_transform(st_centroid(st_collect(projected_location)), 4326)),
+    extensions.st_y(extensions.st_transform(extensions.st_centroid(extensions.st_collect(projected_location)), 4326)),
+    extensions.st_x(extensions.st_transform(extensions.st_centroid(extensions.st_collect(projected_location)), 4326)),
     array_agg(id)
   from clustered
   group by category_id, category_name, cluster_id;

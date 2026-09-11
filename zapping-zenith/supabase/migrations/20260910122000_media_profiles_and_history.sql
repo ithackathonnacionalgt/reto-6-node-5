@@ -1,5 +1,5 @@
 create table public.report_media (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   report_id uuid not null references public.reports(id) on delete cascade,
   storage_path text unique not null,
   media_type text not null,
@@ -8,7 +8,7 @@ create table public.report_media (
 );
 
 create table public.status_history (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default extensions.gen_random_uuid(),
   report_id uuid not null references public.reports(id) on delete cascade,
   status public.report_status not null,
   message text,
