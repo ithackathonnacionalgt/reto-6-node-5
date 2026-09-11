@@ -60,7 +60,7 @@ El acceso comienza en `/admin/login` con Supabase Auth por correo y contraseña.
 ## Estructura relevante
 
 ```text
-zapping-zenith/
+reto-6-node-5/
 ├── astro.config.mjs
 ├── package.json
 ├── wrangler.jsonc
@@ -78,6 +78,7 @@ zapping-zenith/
 │   ├── contracts/
 │   │   └── reports.ts
 │   ├── features/
+│   │   ├── locations/server/get-municipalities.ts
 │   │   ├── media/server/create-upload-instructions.ts
 │   │   ├── notifications/server/send-status-update-email.ts
 │   │   └── reports/server/
@@ -105,6 +106,7 @@ zapping-zenith/
 │   │   │   ├── login.astro
 │   │   │   └── mapa/index.astro
 │   │   ├── api/
+│   │   │   ├── locations.ts
 │   │   │   ├── admin/report-clusters/index.ts
 │   │   │   ├── admin/reports/[id].ts
 │   │   │   ├── admin/reports/[id]/status.ts
@@ -141,6 +143,7 @@ No se incluyen `node_modules`, `dist`, `.astro` ni `supabase/.temp`.
 
 | Método | Ruta | Propósito |
 |---|---|---|
+| GET | `/api/locations?department=Guatemala` | Devuelve los municipios oficiales del departamento como `string[]` |
 | POST | `/api/reports` | Crea denuncia y prepara cargas firmadas |
 | POST | `/api/reports/{trackingCode}/media/complete` | Valida cantidad, ruta, MIME y tamaño de evidencia |
 | GET | `/api/reports/tracking/{trackingCode}` | Devuelve seguimiento sanitizado |
@@ -171,6 +174,8 @@ No se incluyen `node_modules`, `dist`, `.astro` ni `supabase/.temp`.
 | Tabla | Propósito | Campos principales |
 |---|---|---|
 | `categories` | Catálogo de categorías | `id`, `slug`, `name`, `description`, `icon`, `created_at` |
+| `departments` | Catálogo de los 22 departamentos de Guatemala | `code`, `name` |
+| `municipalities` | Catálogo de los 340 municipios | `code`, `department_code`, `name` |
 | `reports` | Denuncias | `id`, `tracking_code`, anonimato, datos opcionales, categoría, descripción, ubicación, estado y timestamps |
 | `report_media` | Evidencia esperada | `report_id`, `storage_path`, `media_type`, `size_bytes`, `created_at` |
 | `status_history` | Historial de cambios | `report_id`, `status`, `message`, `changed_by`, `created_at` |
@@ -193,7 +198,7 @@ Las funciones con privilegios elevados fijan `search_path` y tienen permisos de 
 
 ### RLS y Storage
 
-- Categorías: lectura pública.
+- Categorías, departamentos y municipios: lectura pública sin escrituras de clientes.
 - Denuncias, medios e historial: lectura solo para `ADMIN` y `VIEWER` autenticados.
 - Perfiles: cada usuario puede leer su propio perfil.
 - Escrituras de denuncias y medios: servicios de servidor con cliente privilegiado.
@@ -212,8 +217,11 @@ Las migraciones están versionadas y se aplican en este orden:
 4. `20260910123000_functions_and_triggers.sql`
 5. `20260910124000_indexes.sql`
 6. `20260910125000_rls_and_storage.sql`
+7. `20260911171422_locations_catalog.sql`
 
 `supabase/seed.sql` inserta exactamente las categorías `aire`, `ruido`, `suelo`, `agua`, `visual` y `otros` usando `ON CONFLICT (slug) DO NOTHING`.
+
+El catálogo territorial usa códigos y nombres de las 340 municipalidades publicados por SEGEPLAN en el conjunto de datos **Cálculo Matemático para la Asignación Constitucional a las Municipalidades 2026**.
 
 El repositorio todavía no incluye `supabase/config.toml`. Para usar el stack local completo, inicializa la configuración una sola vez:
 

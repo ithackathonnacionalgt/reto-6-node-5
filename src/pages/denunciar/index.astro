@@ -5,7 +5,7 @@ import Footer from "../../components/Footer.astro";
 ---
 
 <BaseLayout
-  title="Registrar denuncia | EcoAlerta MARN"
+  title="Registrar denuncia | MONAMI"
   description="Registra una denuncia ambiental con ubicación y evidencia."
 >
   <Header />
@@ -52,11 +52,38 @@ import Footer from "../../components/Footer.astro";
         <div class="mt-5 grid gap-5 sm:grid-cols-2">
           <div>
             <label for="department" class="mb-2 block text-sm font-semibold">Departamento <span class="text-red-600">*</span></label>
-            <input id="department" name="department" required placeholder="Ej. Guatemala" class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
+            <select id="department" name="department" required class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+              <option value="">Selecciona un departamento</option>
+              <option value="Alta Verapaz">Alta Verapaz</option>
+              <option value="Baja Verapaz">Baja Verapaz</option>
+              <option value="Chimaltenango">Chimaltenango</option>
+              <option value="Chiquimula">Chiquimula</option>
+              <option value="El Progreso">El Progreso</option>
+              <option value="Escuintla">Escuintla</option>
+              <option value="Guatemala">Guatemala</option>
+              <option value="Huehuetenango">Huehuetenango</option>
+              <option value="Izabal">Izabal</option>
+              <option value="Jalapa">Jalapa</option>
+              <option value="Jutiapa">Jutiapa</option>
+              <option value="Petén">Petén</option>
+              <option value="Quetzaltenango">Quetzaltenango</option>
+              <option value="Quiché">Quiché</option>
+              <option value="Retalhuleu">Retalhuleu</option>
+              <option value="Sacatepéquez">Sacatepéquez</option>
+              <option value="San Marcos">San Marcos</option>
+              <option value="Santa Rosa">Santa Rosa</option>
+              <option value="Sololá">Sololá</option>
+              <option value="Suchitepéquez">Suchitepéquez</option>
+              <option value="Totonicapán">Totonicapán</option>
+              <option value="Zacapa">Zacapa</option>
+            </select>
           </div>
           <div>
             <label for="municipality" class="mb-2 block text-sm font-semibold">Municipio <span class="text-red-600">*</span></label>
-            <input id="municipality" name="municipality" required placeholder="Ej. Mixco" class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
+            <select id="municipality" name="municipality" required disabled class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+              <option value="">Selecciona primero un departamento</option>
+            </select>
+            <p id="municipality-status" class="mt-2 text-sm text-slate-500" aria-live="polite"></p>
           </div>
         </div>
         <div class="mt-5">
@@ -124,8 +151,9 @@ import Footer from "../../components/Footer.astro";
   import { createClient } from "@supabase/supabase-js";
   import L from "leaflet";
   import "leaflet/dist/leaflet.css";
-  import markerIconUrl from "leaflet/dist/images/marker-icon.png";
-  import markerShadowUrl from "leaflet/dist/images/marker-shadow.png";
+  import markerIconUrl from "leaflet/dist/images/marker-icon.png?url";
+  import markerIconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png?url";
+  import markerShadowUrl from "leaflet/dist/images/marker-shadow.png?url";
 
   const MAX_FILES = 5;
   const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -143,6 +171,9 @@ import Footer from "../../components/Footer.astro";
   const reporterEmailInput = document.querySelector<HTMLInputElement>("#reporter-email");
   const categorySelect = document.querySelector<HTMLSelectElement>("#category");
   const categoryStatus = document.querySelector<HTMLParagraphElement>("#category-status");
+  const departmentSelect = document.querySelector<HTMLSelectElement>("#department");
+  const municipalitySelect = document.querySelector<HTMLSelectElement>("#municipality");
+  const municipalityStatus = document.querySelector<HTMLParagraphElement>("#municipality-status");
   const latitudeInput = document.querySelector<HTMLInputElement>("#latitude");
   const longitudeInput = document.querySelector<HTMLInputElement>("#longitude");
   const mapElement = document.querySelector<HTMLDivElement>("#complaint-map");
@@ -175,6 +206,54 @@ import Footer from "../../components/Footer.astro";
   }
   void loadCategories();
 
+  async function loadMunicipalities() {
+    if (!departmentSelect || !municipalitySelect) return;
+
+    const department = departmentSelect.value;
+    municipalitySelect.disabled = true;
+    municipalitySelect.replaceChildren(new Option(
+      department ? "Cargando municipios..." : "Selecciona primero un departamento",
+      "",
+    ));
+    if (municipalityStatus) municipalityStatus.textContent = "";
+
+    if (!department) return;
+
+    try {
+      const response = await fetch(`/api/locations?department=${encodeURIComponent(department)}`);
+      const body: unknown = await response.json();
+
+      if (!response.ok) {
+        const message = typeof body === "object" && body !== null && "error" in body
+          ? String(body.error)
+          : "No se pudieron cargar los municipios.";
+        throw new Error(message);
+      }
+
+      if (!Array.isArray(body) || !body.every((municipality) => typeof municipality === "string")) {
+        throw new Error("La respuesta de municipios no es válida.");
+      }
+
+      municipalitySelect.replaceChildren(new Option("Selecciona un municipio", ""));
+      for (const municipality of body) {
+        municipalitySelect.add(new Option(municipality, municipality));
+      }
+      municipalitySelect.disabled = false;
+      if (municipalityStatus) {
+        municipalityStatus.textContent = `${body.length} municipios disponibles.`;
+      }
+    } catch (error) {
+      municipalitySelect.replaceChildren(new Option("Municipios no disponibles", ""));
+      if (municipalityStatus) {
+        municipalityStatus.textContent = error instanceof Error
+          ? error.message
+          : "No se pudieron cargar los municipios.";
+      }
+    }
+  }
+
+  departmentSelect?.addEventListener("change", () => void loadMunicipalities());
+
   function updateReporterFields() {
     const isAnonymous = anonymousInput?.checked ?? false;
     reporterFields?.classList.toggle("hidden", isAnonymous);
@@ -199,7 +278,15 @@ import Footer from "../../components/Footer.astro";
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(map);
-    const icon = L.icon({ iconUrl: markerIconUrl, shadowUrl: markerShadowUrl, iconSize: [25, 41], iconAnchor: [12, 41], shadowSize: [41, 41] });
+    const icon = L.icon({
+      iconUrl: markerIconUrl,
+      iconRetinaUrl: markerIconRetinaUrl,
+      shadowUrl: markerShadowUrl,
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
     const setLocation = (latitude: number, longitude: number, centerMap = true) => {
       const coordinates: L.LatLngExpression = [latitude, longitude];
       if (latitudeInput) latitudeInput.value = latitude.toFixed(6);
@@ -271,8 +358,8 @@ import Footer from "../../components/Footer.astro";
     const payload = {
       categoryId: categorySelect.value,
       description: (document.querySelector<HTMLTextAreaElement>("#description")?.value ?? "").trim(),
-      department: (document.querySelector<HTMLInputElement>("#department")?.value ?? "").trim(),
-      municipality: (document.querySelector<HTMLInputElement>("#municipality")?.value ?? "").trim(),
+      department: (departmentSelect?.value ?? "").trim(),
+      municipality: (municipalitySelect?.value ?? "").trim(),
       locationReference: (document.querySelector<HTMLInputElement>("#address")?.value ?? "").trim(),
       latitude: Number(latitudeInput.value),
       longitude: Number(longitudeInput.value),
