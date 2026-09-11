@@ -2,16 +2,6 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Header from "../../components/Header.astro";
 import Footer from "../../components/Footer.astro";
-
-const categories = [
-  "Contaminación del agua",
-  "Contaminación del aire",
-  "Manejo inadecuado de desechos",
-  "Ruido excesivo",
-  "Deforestación",
-  "Contaminación visual",
-  "Otro",
-];
 ---
 
 <BaseLayout
@@ -25,12 +15,8 @@ const categories = [
       <a href="/" class="text-sm font-semibold text-emerald-700 hover:text-emerald-800">
         ← Volver al inicio
       </a>
-      <p class="mt-5 text-sm font-bold uppercase tracking-widest text-emerald-700">
-        Nueva denuncia
-      </p>
-      <h1 class="mt-2 text-4xl font-bold tracking-tight text-slate-950">
-        Reporta un posible daño ambiental
-      </h1>
+      <p class="mt-5 text-sm font-bold uppercase tracking-widest text-emerald-700">Nueva denuncia</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight text-slate-950">Reporta un posible daño ambiental</h1>
       <p class="mt-4 max-w-2xl leading-7 text-slate-600">
         Proporciona información clara. Puedes enviar la denuncia de forma anónima.
       </p>
@@ -39,251 +25,210 @@ const categories = [
     <form id="complaint-form" class="space-y-8">
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 class="text-xl font-bold">1. Tipo de denuncia</h2>
-
         <div class="mt-5 grid gap-5 sm:grid-cols-2">
           <div>
             <label for="category" class="mb-2 block text-sm font-semibold">
               Categoría <span class="text-red-600">*</span>
             </label>
-            <select
-              id="category"
-              name="category"
-              required
-              class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-            >
-              <option value="">Selecciona una categoría</option>
-              {categories.map((category) => <option value={category}>{category}</option>)}
+            <select id="category" name="categoryId" required class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100">
+              <option value="">Cargando categorías...</option>
             </select>
+            <p id="category-status" class="mt-2 text-sm text-slate-500" aria-live="polite"></p>
           </div>
-
           <div>
-            <label for="reported-party" class="mb-2 block text-sm font-semibold">
-              Persona o empresa involucrada
-            </label>
-            <input
-              id="reported-party"
-              name="reportedParty"
-              type="text"
-              placeholder="Si la conoces"
-              class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-            />
+            <label for="reported-party" class="mb-2 block text-sm font-semibold">Persona o empresa involucrada</label>
+            <input id="reported-party" name="reportedCompany" type="text" placeholder="Si la conoces" class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
           </div>
         </div>
-
         <div class="mt-5">
-          <label for="description" class="mb-2 block text-sm font-semibold">
-            Describe lo sucedido <span class="text-red-600">*</span>
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            required
-            minlength="20"
-            rows="6"
-            placeholder="Explica qué ocurrió, cuándo lo observaste y por qué consideras que afecta el ambiente."
-            class="w-full resize-y rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-          ></textarea>
+          <label for="description" class="mb-2 block text-sm font-semibold">Describe lo sucedido <span class="text-red-600">*</span></label>
+          <textarea id="description" name="description" required minlength="20" rows="6" placeholder="Explica qué ocurrió, cuándo lo observaste y por qué consideras que afecta el ambiente." class="w-full resize-y rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"></textarea>
         </div>
       </section>
 
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 class="text-xl font-bold">2. Ubicación</h2>
-
+        <p class="mt-2 text-sm leading-6 text-slate-600">Usa tu ubicación actual o selecciona el punto exacto directamente en el mapa.</p>
         <div class="mt-5 grid gap-5 sm:grid-cols-2">
           <div>
-            <label for="department" class="mb-2 block text-sm font-semibold">
-              Departamento <span class="text-red-600">*</span>
-            </label>
-            <input
-              id="department"
-              name="department"
-              required
-              placeholder="Ej. Guatemala"
-              class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-            />
+            <label for="department" class="mb-2 block text-sm font-semibold">Departamento <span class="text-red-600">*</span></label>
+            <input id="department" name="department" required placeholder="Ej. Guatemala" class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
           </div>
-
           <div>
-            <label for="municipality" class="mb-2 block text-sm font-semibold">
-              Municipio <span class="text-red-600">*</span>
-            </label>
-            <input
-              id="municipality"
-              name="municipality"
-              required
-              placeholder="Ej. Mixco"
-              class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-            />
+            <label for="municipality" class="mb-2 block text-sm font-semibold">Municipio <span class="text-red-600">*</span></label>
+            <input id="municipality" name="municipality" required placeholder="Ej. Mixco" class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
           </div>
         </div>
-
         <div class="mt-5">
-          <label for="address" class="mb-2 block text-sm font-semibold">
-            Dirección o referencia <span class="text-red-600">*</span>
-          </label>
-          <input
-            id="address"
-            name="address"
-            required
-            placeholder="Zona, colonia, carretera, punto de referencia..."
-            class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-          />
+          <label for="address" class="mb-2 block text-sm font-semibold">Dirección o referencia <span class="text-red-600">*</span></label>
+          <input id="address" name="locationReference" required placeholder="Zona, colonia, carretera, punto de referencia..." class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" />
         </div>
-
-        <button
-          type="button"
-          id="location-button"
-          class="mt-5 rounded-xl border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-        >
-          Usar mi ubicación actual
-        </button>
-        <p id="location-status" class="mt-2 text-sm text-slate-500"></p>
+        <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+          <div id="complaint-map" class="h-80 w-full" aria-label="Mapa para seleccionar la ubicación de la denuncia"></div>
+        </div>
+        <p class="mt-2 text-sm text-slate-500">Haz clic en el mapa o arrastra el marcador para corregir la ubicación.</p>
+        <button type="button" id="location-button" class="mt-5 rounded-xl border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Usar mi ubicación actual</button>
+        <p id="location-status" class="mt-2 text-sm text-slate-500" aria-live="polite"></p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="latitude" class="mb-2 block text-sm font-semibold">Latitud</label>
+            <input id="latitude" name="latitude" type="number" step="any" readonly placeholder="Selecciona una ubicación" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-700" />
+          </div>
+          <div>
+            <label for="longitude" class="mb-2 block text-sm font-semibold">Longitud</label>
+            <input id="longitude" name="longitude" type="number" step="any" readonly placeholder="Selecciona una ubicación" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-700" />
+          </div>
+        </div>
       </section>
 
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 class="text-xl font-bold">3. Evidencia multimedia</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-600">
-          Adjunta hasta 5 fotografías o videos. Máximo recomendado: 50 MB por archivo.
-        </p>
-
-        <label
-          for="evidence"
-          class="mt-5 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50 px-6 py-10 text-center hover:border-emerald-500"
-        >
+        <p class="mt-2 text-sm leading-6 text-slate-600">Adjunta hasta 5 fotografías o videos. Máximo recomendado: 50 MB por archivo.</p>
+        <label for="evidence" class="mt-5 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50 px-6 py-10 text-center hover:border-emerald-500">
           <span class="text-3xl">📎</span>
           <span class="mt-3 font-semibold text-emerald-800">Seleccionar fotos o videos</span>
           <span class="mt-1 text-sm text-slate-600">JPG, PNG, WebP, MP4 o WebM</span>
         </label>
-
-        <input
-          id="evidence"
-          name="evidence"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
-          multiple
-          class="sr-only"
-        />
-
+        <input id="evidence" name="evidence" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple class="sr-only" />
         <div id="file-list" class="mt-5 grid gap-3 sm:grid-cols-2"></div>
       </section>
 
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="flex items-start gap-3">
-          <input
-            id="anonymous"
-            name="anonymous"
-            type="checkbox"
-            class="mt-1 size-4 accent-emerald-700"
-          />
+          <input id="anonymous" name="isAnonymous" type="checkbox" class="mt-1 size-4 accent-emerald-700" />
           <div>
             <label for="anonymous" class="font-semibold">Deseo realizar una denuncia anónima</label>
-            <p class="mt-1 text-sm leading-6 text-slate-600">
-              Si no marcas esta opción, solicitaremos tus datos de contacto en la siguiente versión del formulario.
-            </p>
+            <p class="mt-1 text-sm leading-6 text-slate-600">Si no marcas esta opción, solicitaremos tus datos de contacto en la siguiente versión del formulario.</p>
           </div>
         </div>
       </section>
 
       <p id="form-message" role="alert" class="hidden rounded-xl p-4 text-sm"></p>
-
-      <button
-        type="submit"
-        class="w-full rounded-xl bg-emerald-700 px-6 py-4 font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-      >
-        Continuar con la denuncia
-      </button>
+      <button type="submit" class="w-full rounded-xl bg-emerald-700 px-6 py-4 font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-400">Continuar con la denuncia</button>
     </form>
   </main>
-
   <Footer />
 </BaseLayout>
 
 <script>
+  import { createClient } from "@supabase/supabase-js";
+  import L from "leaflet";
+  import "leaflet/dist/leaflet.css";
+  import markerIconUrl from "leaflet/dist/images/marker-icon.png";
+  import markerShadowUrl from "leaflet/dist/images/marker-shadow.png";
+
   const MAX_FILES = 5;
   const MAX_FILE_SIZE = 50 * 1024 * 1024;
-
+  const DEFAULT_CENTER: L.LatLngExpression = [14.6349, -90.5069];
   const evidenceInput = document.querySelector<HTMLInputElement>("#evidence");
   const fileList = document.querySelector<HTMLDivElement>("#file-list");
   const locationButton = document.querySelector<HTMLButtonElement>("#location-button");
   const locationStatus = document.querySelector<HTMLParagraphElement>("#location-status");
   const form = document.querySelector<HTMLFormElement>("#complaint-form");
   const formMessage = document.querySelector<HTMLParagraphElement>("#form-message");
+  const categorySelect = document.querySelector<HTMLSelectElement>("#category");
+  const categoryStatus = document.querySelector<HTMLParagraphElement>("#category-status");
+  const latitudeInput = document.querySelector<HTMLInputElement>("#latitude");
+  const longitudeInput = document.querySelector<HTMLInputElement>("#longitude");
+  const mapElement = document.querySelector<HTMLDivElement>("#complaint-map");
 
   function showMessage(message: string, type: "error" | "info") {
     if (!formMessage) return;
-
     formMessage.textContent = message;
-    formMessage.className =
-      type === "error"
-        ? "block rounded-xl bg-red-50 p-4 text-sm text-red-700"
-        : "block rounded-xl bg-amber-50 p-4 text-sm text-amber-800";
+    formMessage.className = type === "error" ? "block rounded-xl bg-red-50 p-4 text-sm text-red-700" : "block rounded-xl bg-amber-50 p-4 text-sm text-amber-800";
+  }
+
+  async function loadCategories() {
+    if (!categorySelect) return;
+    const url = import.meta.env.PUBLIC_SUPABASE_URL;
+    const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !anonKey) {
+      categorySelect.innerHTML = '<option value="">Categorías no disponibles</option>';
+      if (categoryStatus) categoryStatus.textContent = "Configura la conexión pública de Supabase.";
+      return;
+    }
+    const supabase = createClient(url, anonKey);
+    const { data, error } = await supabase.from("categories").select("id, slug, name, icon").order("name");
+    if (error || !data?.length) {
+      categorySelect.innerHTML = '<option value="">No se pudieron cargar las categorías</option>';
+      if (categoryStatus) categoryStatus.textContent = "Intenta recargar la página.";
+      return;
+    }
+    categorySelect.replaceChildren(new Option("Selecciona una categoría", ""));
+    for (const category of data) categorySelect.add(new Option(category.name, category.id));
+    if (categoryStatus) categoryStatus.textContent = `${data.length} categorías disponibles.`;
+  }
+  void loadCategories();
+
+  const map = mapElement ? L.map(mapElement).setView(DEFAULT_CENTER, 12) : null;
+  let marker: L.Marker | null = null;
+  if (map) {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+    const icon = L.icon({ iconUrl: markerIconUrl, shadowUrl: markerShadowUrl, iconSize: [25, 41], iconAnchor: [12, 41], shadowSize: [41, 41] });
+    const setLocation = (latitude: number, longitude: number, centerMap = true) => {
+      const coordinates: L.LatLngExpression = [latitude, longitude];
+      if (latitudeInput) latitudeInput.value = latitude.toFixed(6);
+      if (longitudeInput) longitudeInput.value = longitude.toFixed(6);
+      if (!marker) {
+        marker = L.marker(coordinates, { draggable: true, icon }).addTo(map);
+        marker.on("dragend", () => {
+          const position = marker?.getLatLng();
+          if (position) setLocation(position.lat, position.lng, false);
+        });
+      } else marker.setLatLng(coordinates);
+      if (centerMap) map.setView(coordinates, 16);
+      if (locationStatus) locationStatus.textContent = `Ubicación seleccionada: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+    };
+    map.on("click", (event) => setLocation(event.latlng.lat, event.latlng.lng));
+    locationButton?.addEventListener("click", () => {
+      if (!locationStatus) return;
+      if (!navigator.geolocation) {
+        locationStatus.textContent = "Tu navegador no permite usar geolocalización.";
+        return;
+      }
+      locationStatus.textContent = "Obteniendo ubicación...";
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => setLocation(coords.latitude, coords.longitude),
+        () => { locationStatus.textContent = "No fue posible obtener la ubicación. Puedes seleccionarla en el mapa."; },
+      );
+    });
   }
 
   evidenceInput?.addEventListener("change", () => {
     if (!fileList || !evidenceInput.files) return;
-
     const files = Array.from(evidenceInput.files);
-
     if (files.length > MAX_FILES) {
       evidenceInput.value = "";
       fileList.textContent = `Puedes adjuntar un máximo de ${MAX_FILES} archivos.`;
       fileList.className = "mt-5 text-sm text-red-600";
       return;
     }
-
     if (files.some((file) => file.size > MAX_FILE_SIZE)) {
       evidenceInput.value = "";
       fileList.textContent = "Cada archivo debe pesar menos de 50 MB.";
       fileList.className = "mt-5 text-sm text-red-600";
       return;
     }
-
     fileList.replaceChildren();
-
     for (const file of files) {
       const card = document.createElement("div");
       const name = document.createElement("p");
       const size = document.createElement("p");
-
       card.className = "rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm";
       name.className = "truncate font-semibold text-slate-800";
       size.className = "mt-1 text-slate-500";
-
       name.textContent = file.name;
       size.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
-
       card.append(name, size);
       fileList.append(card);
     }
   });
 
-  locationButton?.addEventListener("click", () => {
-    if (!locationStatus) return;
-
-    if (!navigator.geolocation) {
-      locationStatus.textContent = "Tu navegador no permite usar geolocalización.";
-      return;
-    }
-
-    locationStatus.textContent = "Obteniendo ubicación...";
-
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        locationStatus.textContent =
-          `Ubicación obtenida: ${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`;
-      },
-      () => {
-        locationStatus.textContent =
-          "No fue posible obtener la ubicación. Puedes indicar una referencia manual.";
-      },
-    );
-  });
-
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
-    showMessage(
-      "Formulario validado. El siguiente paso será conectarlo a Supabase.",
-      "info",
-    );
+    showMessage("Formulario validado. El siguiente paso será conectarlo a Supabase.", "info");
   });
 </script>

@@ -21,6 +21,7 @@
     "@types/canvas-confetti": "^1.9.0",
     "astro": "^7.3.2",
     "canvas-confetti": "^1.9.4",
+    "leaflet": "^1.9.4",
     "tailwindcss": "^4.2.1",
     "vite": "^8.0.13"
   },
@@ -28,6 +29,7 @@
     "esbuild": true
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.22",
     "supabase": "^2.117.0",
     "wrangler": "^4.131.0"
   }
